@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using ImgDiff.Models;
 
-namespace ImgDiff
+namespace ImgDiff.Interfaces
 {
     public interface ICompareImages
     {

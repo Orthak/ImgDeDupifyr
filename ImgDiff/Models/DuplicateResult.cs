@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace ImgDiff
+namespace ImgDiff.Models
 {
     public class DuplicateResult
     {

@@ -1,13 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using ImgDiff.Builders;
+using ImgDiff.Comparers;
+using ImgDiff.Hashing;
+using ImgDiff.Interfaces;
+using ImgDiff.Models;
 
 namespace ImgDiff
 {
     class Program
     {
-        static ICompareImages comparer;
-        
         static async Task Main(string[] args)
         {
             Console.WriteLine(
@@ -23,28 +27,54 @@ namespace ImgDiff
                 return;
             }
 
-            if (request.Contains(","))
-            {
-                comparer = new SingleComparison();
-            }
+            var imageComparer = BuildImageComparer(request);
+            var duplicateResults = await imageComparer.Run(request);
+            if (duplicateResults.Count <= 0)
+                HandleNoDuplicates(request);
             else
-            {
-                comparer = new DirectoryComparison();
-            }
-            
-            var duplicateResults = await comparer.Run(request);
+                HandleHasDuplicates(duplicateResults, request);
+        }
 
-            Console.WriteLine($"The following duplicates were found:");
-            for (var resIndex = 0; resIndex < duplicateResults.Count(); resIndex++)
+        static ICompareImages BuildImageComparer(string request)
+        {
+            ICompareImages imageComparer;
+            IHashProvider hashProvider = new BasicHashProvider();
+            ComparisonOptions comparerOptions = new ComparisonOptionsBuilder()
+                .SearchOnlyTopDirectory(true)
+                .ShouldSucceedWithPercentage(1/(double)9)
+                .Build();
+            ICompareStrings stringComparer = new HashComparison(comparerOptions.BiasPercent);
+            
+            if (request.Contains(","))
+                imageComparer = new SingleComparison(
+                    hashProvider,
+                    stringComparer,
+                    comparerOptions);
+            else
+                imageComparer = new DirectoryComparison(
+                    hashProvider,
+                    stringComparer,
+                    comparerOptions);
+            
+            return imageComparer;
+        }
+        
+        static void HandleNoDuplicates(string requestedDirectory)
+        {
+            Console.WriteLine($"No duplicate images were found in '{requestedDirectory}'.");
+        }
+        
+        static void HandleHasDuplicates(List<DuplicateResult> duplicateResults, string requestedDirectory)
+        {
+            Console.WriteLine($"The following {duplicateResults.Count} duplicates were found in '{requestedDirectory}':");
+            for (var resultIndex = 0; resultIndex < duplicateResults.Count(); resultIndex++)
             {
-                if (!duplicateResults[resIndex].Duplicates.Any())
+                if (!duplicateResults[resultIndex].Duplicates.Any())
                     continue;
-                
-                Console.WriteLine($"Result #{resIndex}: {duplicateResults[resIndex].BaseImage.Name}");
-                for (var dupIndex = 0; dupIndex < duplicateResults[resIndex].Duplicates.Count(); dupIndex++)
-                {
-                    Console.WriteLine($"\tDupe #{dupIndex}: {duplicateResults[resIndex].Duplicates[dupIndex].Name}");
-                }
+                    
+                Console.WriteLine($"Result #{resultIndex}: {duplicateResults[resultIndex].BaseImage.Name}");
+                for (var dupIndex = 0; dupIndex < duplicateResults[resultIndex].Duplicates.Count(); dupIndex++)
+                    Console.WriteLine($"\tDupe #{dupIndex}: {duplicateResults[resultIndex].Duplicates[dupIndex].Name}");
             }
         }
     }

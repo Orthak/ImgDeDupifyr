@@ -1,12 +1,14 @@
-namespace ImgDiff
+namespace ImgDiff.Constants
 {
-    public static class Extensions
+    public static class ValidExtensions
     {
-        public static string[] ValidForImage = {
+        public static readonly string[] ForImage = {
             ".jpg",
             ".jpeg",
+            ".jfif",
             ".png",
             ".gif",
+            ".gifv",
             ".tiff",
             ".bmp",
             ".webp"
