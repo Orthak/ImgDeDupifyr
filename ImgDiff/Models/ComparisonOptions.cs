@@ -23,9 +23,9 @@ namespace ImgDiff.Models
             BiasPercent = 1/biasPercent;
         }
         
-        static BiasOutOfBoundsException BuildBiasBoundsException(double value, string boundryMessage)
+        static BiasOutOfBoundsException BuildBiasBoundsException(double value, string boundaryMessage)
         {
-            return new BiasOutOfBoundsException($"The given bias value ({value}) cannot be {boundryMessage}.");
+            return new BiasOutOfBoundsException($"The given bias value ({value}) cannot be {boundaryMessage}.");
         }
     }
 }

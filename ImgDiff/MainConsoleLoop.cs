@@ -71,7 +71,6 @@ namespace ImgDiff
                     continue;
                 }
                 
-
                 if (duplicateResults.Count <= 0)
                     HandleNoDuplicates(inputString);
                 else
@@ -88,7 +87,9 @@ namespace ImgDiff
         {
             return ProgramCommands.ForTermination
                 .Any(command => 
-                    request.Trim().ToLowerInvariant().Equals(command));
+                    request.Trim()
+                           .ToLowerInvariant()
+                           .Equals(command));
         }
 
         /// <summary>
