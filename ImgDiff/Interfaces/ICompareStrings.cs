@@ -1,7 +1,9 @@
+using System.Threading.Tasks;
+
 namespace ImgDiff.Interfaces
 {
     public interface ICompareStrings
     {
-        double CalculatePercentage(string source, string target);
+        Task<double> CalculatePercentage(string source, string target);
     }
 }

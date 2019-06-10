@@ -9,7 +9,7 @@ namespace ImgDiff.Hashing
 {
     public class BasicHashProvider : IHashProvider
     {
-        public Task<string> Generate(byte[] inputBytes) =>
+        public Task<string> CreateHash(byte[] inputBytes) =>
             Task.Run(() =>
             {
                 var reversedBinary = 

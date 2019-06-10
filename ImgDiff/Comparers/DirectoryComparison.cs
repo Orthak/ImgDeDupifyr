@@ -12,53 +12,47 @@ using ImgDiff.Models;
 
 namespace ImgDiff.Comparers
 {
+    /// <summary>
+    /// Compare each image in a given directory will all other images
+    /// in that directory. Can also optionally look through all sub-directories.
+    /// </summary>
     public class DirectoryComparison : ImageComparer, ICompareImages
     {
-        readonly List<DuplicateResult> duplicateResults = new List<DuplicateResult>();
-
         public DirectoryComparison(
             IHashProvider injectedHashProvider,
-            ICompareStrings stringComparer, 
+            ICompareStrings stringComparer,
             ComparisonOptions options)
         : base (injectedHashProvider, stringComparer, options)
         { }
         
-        public async Task<List<DuplicateResult>> Run(string requestedDirectory)
+        public async Task<List<DuplicateResult>> Run(ComparisonRequest request)
         {
-            if (Directory.Exists(requestedDirectory) == false)
-                throw new DirectoryNotFoundException(
-                    $"Directory '{requestedDirectory}' was not found on the disk.");
-
-            Console.WriteLine($"Searching {(comparisonOptions.TopDirectoryOnly ? "only" : "the top of, and all sub directories, ")} in {requestedDirectory}...");
+            Console.WriteLine($"Searching {(comparisonOptions.DirectorySearchOption == SearchOption.TopDirectoryOnly ? "only" : "the top of, and all sub directories, ")} in {request.DirectoryPath.Value}...");
             
-            // Here, we use the `.EnumerateFiles` method, so that we don't have to wait for 
-            // every item to be return to actually start processing the collection. This improves
-            // performance quite a bit, as we can start building and processing the LocalImage
-            // collection as soon as possible.
-            // We also return the `Task` of building the local image, so we can process them all 
-            // separately, which also improves the speed of the application considerably (~1.9ms for ~2,000 image files).
-            var imageFileBuilders = Directory.EnumerateFiles(
-                requestedDirectory,
-                "*", 
-                comparisonOptions.TopDirectoryOnly?
-                SearchOption.TopDirectoryOnly 
-                : SearchOption.AllDirectories)
-                .Where(file => ValidExtensions.ForImage.Contains(Path.GetExtension(file)))
-                .Select(file => BuildLocalImage(file, Path.GetFileName(file), Path.GetExtension(file)));
+            var imageFileBuilders = ImageBuildersFromDirectory(request.DirectoryPath.Value,
+                    file => ValidExtensions.ForImage.Contains(Path.GetExtension(file)));
             
+#if DEBUG
+            var sw = Stopwatch.StartNew();
+#endif
             // Fire off all the tasks to build the LocalImages array, and wait for them all to complete.
             // Doing it this way means that we only have to wait as long as the longest running builder,
             // instead of having to wait for each one additively.
-            var sw = Stopwatch.StartNew();
             var images = await Task.WhenAll(imageFileBuilders);
+#if DEBUG
             sw.Stop();
-            Console.WriteLine($"Took {sw.ElapsedMilliseconds} ms to run all builders.");
-
-            Console.WriteLine($"Checking {images.Count()} files in '{requestedDirectory}'...");
+            Console.WriteLine($"Took {sw.ElapsedMilliseconds} ms to run all image builders.");
+#endif
+            
+            Console.WriteLine($"Checking {images.Count()} files in '{request.DirectoryPath.Value}'...");
+#if DEBUG
             sw.Restart();
+#endif
             await CheckForDuplicates(images);
+#if DEBUG
             sw.Stop();
-            Console.WriteLine($"Took {sw.ElapsedMilliseconds} ms to check all files.");
+            Console.WriteLine($"Took {sw.ElapsedMilliseconds} ms to check all duplicates.");
+#endif
 
             return duplicateResults;
         }
@@ -93,11 +87,20 @@ namespace ImgDiff.Comparers
             visited.Clear();
         }
 
+        /// <summary>
+        /// For the current image that we're checking, check all other files
+        /// in that directory (or also all subdirectories, if requested) for
+        /// duplication.
+        /// </summary>
+        /// <param name="inDirectory"></param>
+        /// <param name="localImage"></param>
+        /// <param name="visited"></param>
+        /// <returns></returns>
         Task<LocalImage[]> VisitOthers(
             LocalImage[] inDirectory,
             LocalImage localImage,
             List<string> visited) =>
-            Task.Run(() =>
+            Task.Run(async () =>
             {
                 var duplicates = new List<LocalImage>();
                 for (var index = 0; index < inDirectory.Length; index++)
@@ -107,60 +110,24 @@ namespace ImgDiff.Comparers
                     if (inDirectory[index].Name == localImage.Name)
                         continue;
 
-                    // TODO:
-                    // The hashes are too large to use this method. I'll need
-                    // to figure something else out, to get a better performing
-                    // way to compare the strings.
-                    ////var differencePercent = hashComparer.CalculatePercentage(
-                    ////    localImage.Hash,
-                    ////    inDirectory[index].Hash);
-                    ////
-                    ////// If the differencePercent is NOT greater than the bias option,
-                    ////// continue to the next check.
-                    ////if (differencePercent < comparisonOptions.BiasPercent)
-                    ////    continue;
+                    var areEqual = await DirectComparison(localImage, inDirectory[index]);
+                    if (!areEqual) 
+                        continue;
                     
-                    // Add the found duplicate to the list of duplicates for the
-                    // LocalImage we're comparing against.          
-                    var percentage = hashComparer.CalculatePercentage(
-                        localImage.Hash,
-                        inDirectory[index].Hash);
-                    if (localImage.Hash == inDirectory[index].Hash
-                        || percentage >= comparisonOptions.BiasPercent)
-                    {
-                        duplicates.Add(inDirectory[index]);
-                        visited.Add(inDirectory[index].Name);
-                    }
+                    duplicates.Add(inDirectory[index]);
+                    visited.Add(inDirectory[index].Name);
                 }
 
                 return duplicates.ToArray();
             });
 
-        /// <summary>
-        /// Instantiate a new custom class, to hold some useful data about
-        /// each image that we want to look at. This helps reduce complex
-        /// computation later, when we loop over everything.
-        /// </summary>
-        /// <param name="filePath"></param>
-        /// <param name="extension"></param>
-        /// <returns></returns>
-        async Task<LocalImage> BuildLocalImage(string filePath, string name, string extension)
-        {
-            var hash = await GetFileHash(filePath);
-            
-            return new LocalImage(
-                name,
-                filePath,
-                extension,
-                hash);
-        }
-        
-        Task<string> GetFileHash(string filePath)
+        protected override Task<string> GetFileHash(string filePath)
         {
             var bytes = File.ReadAllBytes(filePath);
-            var toHash = bytes.Take(bytes.Length / 16).ToArray();
+            var lengthReductionModifier = 1 << 4;
+            var bytesToHash = bytes.Take(bytes.Length / lengthReductionModifier).ToArray();
             
-            return hashProvider.Generate(toHash);
+            return hashProvider.CreateHash(bytesToHash);
         }
     }
 }

@@ -1,81 +1,56 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using ImgDiff.Builders;
-using ImgDiff.Comparers;
-using ImgDiff.Hashing;
+using ImgDiff.Constants;
 using ImgDiff.Interfaces;
 using ImgDiff.Models;
+using ImgDiff.Monads;
+using ImgDiff.Utilities;
 
 namespace ImgDiff
 {
     class Program
     {
+        // For now, this value won't change during runtime. There may be a case
+        // later on that we'll need a different flag parser to handle. 
+        static readonly IParseFlags flagsParser = new CommandFlagsParser();
+
+        // Store the main console loop, that we'll be using for the program.
+        static readonly MainConsoleLoop mainLoop = new MainConsoleLoop();
+        
         static async Task Main(string[] args)
         {
+            AddValidFlags();
+            var flags = await flagsParser.Parse(args);
+            var comparerOptions = new ComparisonOptionsBuilder().FromCommandFlags(flags, new None<ComparisonOptions>());
+            
             Console.WriteLine(
-                "Enter the directory, to check for duplicate images. Or enter 2 files to compare, separated by a comma.");
+                "Enter the directory ('C:\\to\\some\\directory'), to check for duplicate images."); 
+            Console.WriteLine(
+                "Or enter 2 files to compare, separated by a comma.");
+            Console.WriteLine(
+                "Type 'options' to overwrite the current option settings.");
+            Console.WriteLine("Type 'q' or 'exit' to quit.");
 
-            var request = Console.ReadLine();
-            if (string.IsNullOrEmpty(request))
-            {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine("You must enter either a directory, or a pair of files separated by a coma.");
-                Console.ForegroundColor = ConsoleColor.White;
+            await mainLoop.Execute(comparerOptions);
 
-                return;
-            }
-
-            var imageComparer = BuildImageComparer(request);
-            var duplicateResults = await imageComparer.Run(request);
-            if (duplicateResults.Count <= 0)
-                HandleNoDuplicates(request);
-            else
-                HandleHasDuplicates(duplicateResults, request);
+            Console.WriteLine("Exiting...");
         }
 
-        static ICompareImages BuildImageComparer(string request)
+        /// <summary>
+        /// Tell the parser what to look for. Specifying the names, short
+        /// and long command strings that should be added to the parser's result.
+        /// </summary>
+        static void AddValidFlags()
         {
-            ICompareImages imageComparer;
-            IHashProvider hashProvider = new BasicHashProvider();
-            ComparisonOptions comparerOptions = new ComparisonOptionsBuilder()
-                .SearchOnlyTopDirectory(true)
-                .ShouldSucceedWithPercentage(1/(double)9)
-                .Build();
-            ICompareStrings stringComparer = new HashComparison(comparerOptions.BiasPercent);
-            
-            if (request.Contains(","))
-                imageComparer = new SingleComparison(
-                    hashProvider,
-                    stringComparer,
-                    comparerOptions);
-            else
-                imageComparer = new DirectoryComparison(
-                    hashProvider,
-                    stringComparer,
-                    comparerOptions);
-            
-            return imageComparer;
-        }
-        
-        static void HandleNoDuplicates(string requestedDirectory)
-        {
-            Console.WriteLine($"No duplicate images were found in '{requestedDirectory}'.");
-        }
-        
-        static void HandleHasDuplicates(List<DuplicateResult> duplicateResults, string requestedDirectory)
-        {
-            Console.WriteLine($"The following {duplicateResults.Count} duplicates were found in '{requestedDirectory}':");
-            for (var resultIndex = 0; resultIndex < duplicateResults.Count(); resultIndex++)
-            {
-                if (!duplicateResults[resultIndex].Duplicates.Any())
-                    continue;
-                    
-                Console.WriteLine($"Result #{resultIndex}: {duplicateResults[resultIndex].BaseImage.Name}");
-                for (var dupIndex = 0; dupIndex < duplicateResults[resultIndex].Duplicates.Count(); dupIndex++)
-                    Console.WriteLine($"\tDupe #{dupIndex}: {duplicateResults[resultIndex].Duplicates[dupIndex].Name}");
-            }
+            flagsParser.AddFlag(
+                CommandFlagProperties.SearchOptionFlag.Name, 
+                CommandFlagProperties.SearchOptionFlag.ShortString,
+                CommandFlagProperties.SearchOptionFlag.LongString);
+            flagsParser.AddFlag(
+                CommandFlagProperties.BiasFactorFlag.Name,
+                CommandFlagProperties.BiasFactorFlag.ShortString,
+                CommandFlagProperties.BiasFactorFlag.LongString);
         }
     }
 }

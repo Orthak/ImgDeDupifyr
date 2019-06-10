@@ -4,6 +4,6 @@ namespace ImgDiff.Interfaces
 {
     public interface IHashProvider
     {
-        Task<string> Generate(byte[] inputBytes);
+        Task<string> CreateHash(byte[] inputBytes);
     }
 }

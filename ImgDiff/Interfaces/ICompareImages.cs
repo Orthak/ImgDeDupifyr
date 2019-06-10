@@ -6,6 +6,6 @@ namespace ImgDiff.Interfaces
 {
     public interface ICompareImages
     {
-        Task<List<DuplicateResult>> Run(string request);
+        Task<List<DuplicateResult>> Run(ComparisonRequest request);
     }
 }
