@@ -1,14 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using ImgDiff.Builders;
-using ImgDiff.Comparers;
 using ImgDiff.Constants;
-using ImgDiff.Hashing;
-using ImgDiff.Interfaces;
+using ImgDiff.Factories;
 using ImgDiff.Models;
 using ImgDiff.Monads;
 
@@ -16,6 +13,9 @@ namespace ImgDiff
 {
     public class MainConsoleLoop
     {
+        ComparisonRequestFactory requestFactory  = new ComparisonRequestFactory();
+        ImageComparisonFactory comparisonFactory = new ImageComparisonFactory();
+        
         public async Task Execute(ComparisonOptions initialOptions)
         {
             do
@@ -45,8 +45,8 @@ namespace ImgDiff
                     continue;
                 }
 
-                var comparisonRequest = BuildComparisonRequest(inputString);
-                var imageComparer     = BuildImageComparer(comparisonRequest, initialOptions);
+                var comparisonRequest = requestFactory.ConstructNew(inputString);
+                var imageComparer     = comparisonFactory.ConstructNew(comparisonRequest, initialOptions);
 
                 List<DuplicateResult> duplicateResults;
                 
@@ -90,83 +90,7 @@ namespace ImgDiff
                 .Any(command => 
                     request.Trim().ToLowerInvariant().Equals(command));
         }
-        
-        /// <summary>
-        /// To help better represent what the user requested, and perform better checks
-        /// against the request, we build a new object to hold this data.
-        /// </summary>
-        /// <param name="request">The raw string request that was given by the user.</param>
-        /// <returns>The object representation of the user's request.</returns>
-        static ComparisonRequest BuildComparisonRequest(string request)
-        {
-            var requestBuilder = new ComparisonRequestBuilder();
-            if (request.Contains(','))
-            {
-                var requestArgs = request.Split(',');
-                if (Directory.Exists(requestArgs[1]))
-                {
-                    requestBuilder.UsingComparisonAs(ComparisonWith.Single)
-                        .InDirectory(requestArgs[1])
-                        .WithFirstImage(requestArgs[0]);
-                }
-                else
-                {
-                    requestBuilder.UsingComparisonAs(ComparisonWith.Pair)
-                        .WithFirstImage(requestArgs[0])
-                        .WithSecondImage(requestArgs[1]);
-                }
-            }
-            else
-            {
-                requestBuilder.UsingComparisonAs(ComparisonWith.All)
-                    .InDirectory(request);
-            }
 
-            var comparisonRequest = requestBuilder.Build().Validate();
-            return comparisonRequest;
-        }
-
-        /// <summary>
-        /// Construct the comparison object that we'll be using for this current run. Once
-        /// we have it, we need only call the `Run` method on the result.
-        /// </summary>
-        /// <param name="request"><see cref="ComparisonRequest"/>: The representation of the current request.</param>
-        /// <param name="options"><see cref="ComparisonOptions"/>: The options that will be used for the request.</param>
-        /// <returns>The comparison object, that will handle the current request.</returns>
-        /// <exception cref="ArgumentOutOfRangeException">Throws if we get a <see cref="ComparisonWith"/>
-        /// value that isn't recognized.</exception>
-        static ICompareImages BuildImageComparer(ComparisonRequest request, ComparisonOptions options)
-        {
-            ICompareImages imageComparer;
-            IHashProvider hashProvider = new BasicHashProvider();
-
-            switch (request.With)
-            {
-                case ComparisonWith.All:
-                    imageComparer = new DirectoryComparison(
-                        hashProvider,
-                        new HashComparison(options.BiasPercent),
-                        options);
-                    break;
-                case ComparisonWith.Pair:
-                    imageComparer = new PairComparison(
-                        hashProvider,
-                        new LevenshteinComparison(),
-                        options);
-                    break;
-                case ComparisonWith.Single:
-                    imageComparer = new SingleComparison(
-                        hashProvider,
-                        new HashComparison(options.BiasPercent),
-                        options);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-            
-            return imageComparer;
-        }
-        
         /// <summary>
         /// Change the options that the programs performs comparisons with. The
         /// user will be prompted for each option to overwrite, one at a time.

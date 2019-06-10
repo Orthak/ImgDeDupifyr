@@ -97,11 +97,5 @@ namespace ImgDiff.Builders
                 searchOption.Value,
                 biasPercent.Value);
         }
-
-        IncompleteComparisonOptionsException BuildIncompleteException(string propertyName)
-        {
-            return new IncompleteComparisonOptionsException(
-                $"Comparison Option '{propertyName}' must have a value.");
-        }
     }
 }
