@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using ImgDiff.Builders;
 using ImgDiff.Constants;
@@ -23,13 +24,12 @@ namespace ImgDiff
             AddValidFlags();
             var flags = await flagsParser.Parse(args);
             var comparerOptions = new ComparisonOptionsBuilder().FromCommandFlags(flags, new None<ComparisonOptions>());
-            
-            Console.WriteLine(
-                "Enter the directory ('C:\\to\\some\\directory'), to check for duplicate images."); 
-            Console.WriteLine(
-                "Or enter 2 files to compare, separated by a comma.");
-            Console.WriteLine(
-                "Type 'options' to overwrite the current option settings.");
+
+            Console.ForegroundColor = ConsoleColor.White;
+            Console.WriteLine("********************");
+            Console.WriteLine("*     DEDUPIFYR    *");
+            Console.WriteLine("********************");
+            Console.WriteLine("Type 'help' for more details.");
             Console.WriteLine("Type 'q' or 'exit' to quit.");
 
             await mainLoop.Execute(comparerOptions);

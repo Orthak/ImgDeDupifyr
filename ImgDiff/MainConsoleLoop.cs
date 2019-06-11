@@ -13,14 +13,17 @@ namespace ImgDiff
 {
     public class MainConsoleLoop
     {
-        ComparisonRequestFactory requestFactory  = new ComparisonRequestFactory();
-        ImageComparisonFactory comparisonFactory = new ImageComparisonFactory();
+        readonly ComparisonRequestFactory requestFactory  = new ComparisonRequestFactory();
+        readonly ImageComparisonFactory comparisonFactory = new ImageComparisonFactory();
+
+        static readonly string validExtensionsCombined = ValidExtensions.ForImage.Aggregate((total, next) => $"{total}, {next}");
         
         public async Task Execute(ComparisonOptions initialOptions)
         {
             do
             {
-                Console.Write("DeDupifyr:> ");
+                Console.Write("DeDupifyr> ");
+                
                 var inputString = Console.ReadLine();
                 if (string.IsNullOrEmpty(inputString))
                 {
@@ -32,10 +35,17 @@ namespace ImgDiff
                     continue;
                 }
 
-                if (ShouldTerminate(inputString))
+                if (CommandIsGiven(inputString, ProgramCommands.ForTermination))
                     break;
 
-                if (inputString.ToLowerInvariant().Equals("options"))
+                if (CommandIsGiven(inputString, ProgramCommands.ForHelp))
+                {
+                    OutputHelpText();
+                    
+                    continue;
+                }
+                
+                if (CommandIsGiven(inputString, ProgramCommands.ToChangeOptions))
                 {
                     initialOptions = OverwriteComparisonOptions(initialOptions);
                     
@@ -71,6 +81,10 @@ namespace ImgDiff
                     continue;
                 }
                 
+                /* TODO
+                 * Handle displaying the equality percentage in results.
+                 * Always show this for single comparison
+                 */
                 if (duplicateResults.Count <= 0)
                     HandleNoDuplicates(inputString);
                 else
@@ -83,15 +97,43 @@ namespace ImgDiff
             } while (true);
         }
 
-        static bool ShouldTerminate(string request)
+        
+        static bool CommandIsGiven(string input, IEnumerable<string> toCheck)
         {
-            return ProgramCommands.ForTermination
-                .Any(command => 
-                    request.Trim()
-                           .ToLowerInvariant()
-                           .Equals(command));
+            return toCheck.Any(command => 
+                input.Trim()
+                    .ToLowerInvariant()
+                    .Equals(command));
         }
+        
+        static void OutputHelpText()
+        {
+            Console.WriteLine("_____About_____");
+            Console.WriteLine("This application is used to discover and determine duplicate images.");
+            Console.WriteLine("This is done in 1 of 3 'request' types. Only 1 request can be active at a given time.");
+            Console.WriteLine("The 3 request types are 'Directory', 'Single', and 'Pair'.");
+            Console.WriteLine("Directory compares all images in a directory with every other one.");
+            Console.WriteLine("Single compares 1 image with all other images in a given directory.");
+            Console.WriteLine("Pair compares 2 different images with one another.");
+            
+            Console.WriteLine("_____Request Formats_____");
+            Console.WriteLine("Requests can be made using the following formats"); 
+            Console.WriteLine("    (Directory)              '/path/to/some/directory'");
+            Console.WriteLine("    (Image with Directory)   '/path/to/image.[extension] , /directory/to/compare/against'");
+            Console.WriteLine("    (Image with Other Image) '/path/to/image1.[extension] , /path/to/image2.[extension]'");
+            Console.WriteLine("Valid extensions are " + validExtensionsCombined);
+            Console.WriteLine("Other extension types will simply be ignore by the application.");
+            
+            Console.WriteLine("_____Options_____");
+            Console.WriteLine("There are currently 2 options that can be set.");
+            Console.WriteLine("Directory Level: Tells the program how deep in the directory to search. Does not apply to the Singe request type.");
+            Console.WriteLine("    Values: all, [top]");
+            Console.WriteLine("Bias Factor: The percentage that a comparison must equal, or exceed, for an image to be considered a duplicate.");
+            Console.WriteLine("    Values: 0 to 100, [90]");
+            Console.WriteLine("Type 'options' to overwrite the current option settings.");
 
+        }
+        
         /// <summary>
         /// Change the options that the programs performs comparisons with. The
         /// user will be prompted for each option to overwrite, one at a time.
