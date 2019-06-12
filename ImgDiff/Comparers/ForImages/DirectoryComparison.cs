@@ -3,14 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using ImgDiff.Constants;
-using ImgDiff.Hashing;
 using ImgDiff.Interfaces;
 using ImgDiff.Models;
 
-namespace ImgDiff.Comparers
+namespace ImgDiff.Comparers.ForImages
 {
     /// <summary>
     /// Compare each image in a given directory will all other images
@@ -25,7 +23,7 @@ namespace ImgDiff.Comparers
         : base (injectedHashProvider, stringComparer, options)
         { }
         
-        public async Task<List<DuplicateResult>> Run(ComparisonRequest request)
+        public async Task<List<DeDupifyrResult>> Run(ComparisonRequest request)
         {
             Console.WriteLine($"Searching {(comparisonOptions.DirectorySearchOption == SearchOption.TopDirectoryOnly ? "only" : "the top of, and all sub directories, ")} in {request.DirectoryPath.Value}...");
             
@@ -74,7 +72,7 @@ namespace ImgDiff.Comparers
                 var duplicates = await VisitOthers(inDirectory, inDirectory[index], visited);
                 if (duplicates.Any())
                 {
-                    var duplicateResult = new DuplicateResult(inDirectory[index]);
+                    var duplicateResult = new DeDupifyrResult(inDirectory[index]);
                     duplicateResult.Duplicates.AddRange(duplicates);
                     duplicateResults.Add(duplicateResult);
                 }
@@ -96,13 +94,13 @@ namespace ImgDiff.Comparers
         /// <param name="localImage"></param>
         /// <param name="visited"></param>
         /// <returns></returns>
-        Task<LocalImage[]> VisitOthers(
+        Task<DuplicateImage[]> VisitOthers(
             LocalImage[] inDirectory,
             LocalImage localImage,
             List<string> visited) =>
             Task.Run(async () =>
             {
-                var duplicates = new List<LocalImage>();
+                var duplicates = new List<DuplicateImage>();
                 for (var index = 0; index < inDirectory.Length; index++)
                 {
                     // If we've already processed the image at some point,
@@ -110,12 +108,15 @@ namespace ImgDiff.Comparers
                     if (inDirectory[index].Name == localImage.Name)
                         continue;
 
-                    var areEqual = await DirectComparison(localImage, inDirectory[index]);
-                    if (!areEqual) 
-                        continue;
+                    var isDuplicate = await UpdateDuplicationCollection(
+                        localImage,
+                        inDirectory[index],
+                        duplicates);
                     
-                    duplicates.Add(inDirectory[index]);
-                    visited.Add(inDirectory[index].Name);
+                    // Mark found duplicates as already visited. We don't
+                    // want to bother re-processing images.
+                    if (isDuplicate)
+                        visited.Add(inDirectory[index].Name);
                 }
 
                 return duplicates.ToArray();

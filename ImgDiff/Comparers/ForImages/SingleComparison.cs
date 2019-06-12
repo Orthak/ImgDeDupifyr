@@ -7,7 +7,7 @@ using ImgDiff.Constants;
 using ImgDiff.Interfaces;
 using ImgDiff.Models;
 
-namespace ImgDiff.Comparers
+namespace ImgDiff.Comparers.ForImages
 {
     /// <summary>
     /// Compare a single image file against all other image files in
@@ -22,7 +22,7 @@ namespace ImgDiff.Comparers
         : base(provider, stringComparer, options)
         { }
 
-        public async Task<List<DuplicateResult>> Run(ComparisonRequest request)
+        public async Task<List<DeDupifyrResult>> Run(ComparisonRequest request)
         {
             Console.WriteLine($"Comparing the image at '{request.FirstImagePath.Value}' with all images in '{request.DirectoryPath.Value}'...");
 
@@ -34,7 +34,7 @@ namespace ImgDiff.Comparers
 
             var otherImages = await Task.WhenAll(otherImageBuilders);
 
-            var duplicateResult = new DuplicateResult(sourceImage);
+            var duplicateResult = new DeDupifyrResult(sourceImage);
             var duplicateImages = await CompareToOthers(sourceImage, otherImages);
             duplicateResult.Duplicates.AddRange(duplicateImages);
             
@@ -43,16 +43,15 @@ namespace ImgDiff.Comparers
             return duplicateResults;
         }
 
-        async Task<LocalImage[]> CompareToOthers(LocalImage source, LocalImage[] targets)
+        async Task<DuplicateImage[]> CompareToOthers(LocalImage source, LocalImage[] targets)
         {
-            var duplicates = new List<LocalImage>();
+            var duplicates = new List<DuplicateImage>();
             for (var index = 0; index < targets.Length; index++)
             {
-                var areEqual = await DirectComparison(source, targets[index]);
-                if (!areEqual)
-                    continue;
-                
-                duplicates.Add(targets[index]);
+                await UpdateDuplicationCollection(
+                    source,
+                    targets[index],
+                    duplicates);
             }
 
             return duplicates.ToArray();

@@ -42,57 +42,17 @@ namespace ImgDiff.Models
         {
             switch (With)
             {
-                #region Validate Directory Comparison
-                case ComparisonWith.All 
-                when DirectoryPath.IsNone:
-                    throw new InvalidDirectoryComparisonRequestedException(
-                        "Cannot request a directory comparison without a directory.");
-                case ComparisonWith.All
-                when DirectoryPath.IsSome:
-                    if (!Directory.Exists(DirectoryPath.Value))
-                        throw new InvalidDirectoryComparisonRequestedException(
-                            "The given directory does not appear to exist on the disk.",
-                            new DirectoryNotFoundException(DirectoryPath.Value));
+                case ComparisonWith.All:
+                    ValidateDirectory();
                     break;
-                #endregion Validate Directory Comparison
 
-                #region Validate Pair Comparison
-                case ComparisonWith.Pair 
-                when FirstImagePath.IsNone || SecondImagePath.IsNone:
-                    throw new InvalidPairComparisonRequestedException(
-                        "Cannot request a pair comparison without 2 images.");
-                case ComparisonWith.Pair
-                when FirstImagePath.IsSome && SecondImagePath.IsSome:
-                    if (!File.Exists(FirstImagePath.Value))
-                        throw new InvalidPairComparisonRequestedException(
-                            "The requested image does not appear to exist on the disk.",
-                            new FileNotFoundException(FirstImagePath.Value));
-                        
-                    if (!File.Exists(SecondImagePath.Value))
-                        throw new InvalidPairComparisonRequestedException(
-                            "The requested image does not appear to exist on the disk.",
-                            new FileNotFoundException(SecondImagePath.Value));
+                case ComparisonWith.Pair :
+                    ValidatePair();
                     break;
-                #endregion
                 
-                #region Validate Single Comparison
-                case ComparisonWith.Single 
-                when FirstImagePath.IsNone || DirectoryPath.IsNone:
-                    throw new InvalidSingleComparisonRequestedException(
-                        "Cannot perform a single comparison without an image to compare, or a directory to check against.");
-                case ComparisonWith.Single
-                when FirstImagePath.IsSome && DirectoryPath.IsSome:
-                    if (!File.Exists(FirstImagePath.Value))
-                        throw new InvalidSingleComparisonRequestedException(
-                            "The given file does not appear to exist on the disk.",
-                            new FileNotFoundException(FirstImagePath.Value));
-                    
-                    if (!Directory.Exists(DirectoryPath.Value))
-                        throw new InvalidSingleComparisonRequestedException(
-                            "Either the directory or the file supplied to not appear to exist on the disk.",
-                            new DirectoryNotFoundException(DirectoryPath.Value));
+                case ComparisonWith.Single :
+                    ValidateSingle();
                     break;
-                #endregion Validate Single Comparison
                 
                 default:
                     throw new ArgumentOutOfRangeException(
@@ -100,6 +60,58 @@ namespace ImgDiff.Models
             }
             
             return this;
+        }
+
+        void ValidateDirectory()
+        {
+            switch (DirectoryPath)
+            {
+                case None<string> none:
+                    throw new InvalidDirectoryComparisonRequestedException(
+                        "Cannot request a directory comparison without a directory.");
+                case Some<string> some:
+                    if (!Directory.Exists(DirectoryPath.Value))
+                        throw new InvalidDirectoryComparisonRequestedException(
+                            "The given directory does not appear to exist on the disk.",
+                            new DirectoryNotFoundException(DirectoryPath.Value));
+                    break;
+            }
+        }
+
+        void ValidatePair()
+        {
+            if (FirstImagePath.IsNone
+            ||  SecondImagePath.IsNone)
+                throw new InvalidPairComparisonRequestedException(
+                    "Cannot request a pair comparison without 2 images.");
+            
+            if (!File.Exists(FirstImagePath.Value))
+                throw new InvalidPairComparisonRequestedException(
+                    "The requested image does not appear to exist on the disk.",
+                    new FileNotFoundException(FirstImagePath.Value));
+                        
+            if (!File.Exists(SecondImagePath.Value))
+                throw new InvalidPairComparisonRequestedException(
+                    "The requested image does not appear to exist on the disk.",
+                    new FileNotFoundException(SecondImagePath.Value));
+        }
+
+        void ValidateSingle()
+        {
+            if (FirstImagePath.IsNone
+            ||  DirectoryPath.IsNone)
+                throw new InvalidSingleComparisonRequestedException(
+                    "Cannot perform a single comparison without an image to compare, or a directory to check against.");
+            
+            if (!File.Exists(FirstImagePath.Value))
+                throw new InvalidSingleComparisonRequestedException(
+                    "The given file does not appear to exist on the disk.",
+                    new FileNotFoundException(FirstImagePath.Value));
+                    
+            if (!Directory.Exists(DirectoryPath.Value))
+                throw new InvalidSingleComparisonRequestedException(
+                    "Either the directory or the file supplied to not appear to exist on the disk.",
+                    new DirectoryNotFoundException(DirectoryPath.Value));
         }
     }
 }

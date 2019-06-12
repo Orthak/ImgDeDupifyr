@@ -5,6 +5,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using ImgDiff.Builders;
 using ImgDiff.Constants;
+using ImgDiff.Exceptions;
+using ImgDiff.Extensions;
 using ImgDiff.Factories;
 using ImgDiff.Models;
 using ImgDiff.Monads;
@@ -13,88 +15,76 @@ namespace ImgDiff
 {
     public class MainConsoleLoop
     {
-        readonly ComparisonRequestFactory requestFactory  = new ComparisonRequestFactory();
-        readonly ImageComparisonFactory comparisonFactory = new ImageComparisonFactory();
+        readonly ComparisonRequestFactory requestFactory;
+        readonly ImageComparisonFactory comparisonFactory;
+        readonly ExecutionStatusFactory statusFactory;
 
-        static readonly string validExtensionsCombined = ValidExtensions.ForImage.Aggregate((total, next) => $"{total}, {next}");
-        
-        public async Task Execute(ComparisonOptions initialOptions)
+        public MainConsoleLoop(
+            ComparisonRequestFactory injectedRequestFactory,
+            ImageComparisonFactory injectedComparisonFactory,
+            ExecutionStatusFactory injectedStatusFactory)
         {
-            do
+            requestFactory    = injectedRequestFactory;
+            comparisonFactory = injectedComparisonFactory;
+            statusFactory     = injectedStatusFactory;
+        }
+        
+        public async Task<ExecutionStatus> Execute(ComparisonOptions initialOptions)
+        {
+            Console.Write($"{Program.NAME}> ");
+            
+            var inputString = Console.ReadLine();
+            if (string.IsNullOrEmpty(inputString))
             {
-                Console.Write("DeDupifyr> ");
+                return statusFactory.ConstructFaulted(
+                    new MissingInputException(
+                        "You must enter either a directory ('C:\\to\\some\\directory'), or a pair of files separated by a coma ('C:\\path\\to\\first.png,C:\\path\\to\\second.jpg')."));
+            }
+            
+            var comparisonRequest = requestFactory.Construct(inputString);
+            if (CommandIsGiven(inputString, ProgramCommands.ForTermination))
+                return statusFactory.ConstructTerminated(comparisonRequest);
+
+            if (CommandIsGiven(inputString, ProgramCommands.ForHelp))
+            {
+                OutputHelpText();
+
+                return statusFactory.ConstructNoOp();
+            }
+            
+            if (CommandIsGiven(inputString, ProgramCommands.ToChangeOptions))
+            {
+                initialOptions = OverwriteComparisonOptions(initialOptions);
                 
-                var inputString = Console.ReadLine();
-                if (string.IsNullOrEmpty(inputString))
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(
-                        "You must enter either a directory ('C:\\to\\some\\directory'), or a pair of files separated by a coma ('C:\\path\\to\\first.png,C:\\path\\to\\second.jpg').");
-                    Console.ForegroundColor = ConsoleColor.White;
+                // We need to return here, so that we can reset the console 
+                // input. Otherwise we'll accidentally attempt to process "options"
+                // as a directory.
+                return statusFactory.ConstructUpdated(comparisonRequest, initialOptions);
+            }
 
-                    continue;
-                }
+            var imageComparer = comparisonFactory.Construct(comparisonRequest, initialOptions);
 
-                if (CommandIsGiven(inputString, ProgramCommands.ForTermination))
-                    break;
+            Option<List<DeDupifyrResult>> duplicateResults = new None<List<DeDupifyrResult>>();
+            
+            // For now, just doing a try/catch at the highest level. I plan
+            // to have much better handling. I'll implement the `Either` monad
+            // and have the `Run` method return an instance of that. From there,
+            // I can determine whether to write an error out, or to write the results.
+            try
+            {
+                var sw = Stopwatch.StartNew();
+                var results = await imageComparer.Run(comparisonRequest);
+                duplicateResults = new Some<List<DeDupifyrResult>>(results);
+                sw.Stop();
 
-                if (CommandIsGiven(inputString, ProgramCommands.ForHelp))
-                {
-                    OutputHelpText();
-                    
-                    continue;
-                }
-                
-                if (CommandIsGiven(inputString, ProgramCommands.ToChangeOptions))
-                {
-                    initialOptions = OverwriteComparisonOptions(initialOptions);
-                    
-                    // We need to continue here, so that we can reset the console 
-                    // input. Otherwise we'll accidentally attempt to process "options"
-                    // as a directory.
-                    continue;
-                }
+                Console.WriteLine($"Done in {sw.ElapsedMilliseconds} ms.");
+            }
+            catch (Exception exception)
+            {
+                return statusFactory.ConstructFaulted(exception);
+            }
 
-                var comparisonRequest = requestFactory.ConstructNew(inputString);
-                var imageComparer     = comparisonFactory.ConstructNew(comparisonRequest, initialOptions);
-
-                List<DuplicateResult> duplicateResults;
-                
-                // For now, just doing a try/catch at the highest level. I plan
-                // to have much better handling. I'll implement the `Either` monad
-                // and have the `Run` method return an instance of that. From there,
-                // I can determine whether to write an error out, or to write the results.
-                try
-                {
-                    var sw = Stopwatch.StartNew();
-                    duplicateResults = await imageComparer.Run(comparisonRequest);
-                    sw.Stop();
-
-                    Console.WriteLine($"Done in {sw.ElapsedMilliseconds} ms.");
-                }
-                catch (Exception e)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(e.Message);
-                    Console.ForegroundColor = ConsoleColor.White;
-                    
-                    continue;
-                }
-                
-                /* TODO
-                 * Handle displaying the equality percentage in results.
-                 * Always show this for single comparison
-                 */
-                if (duplicateResults.Count <= 0)
-                    HandleNoDuplicates(inputString);
-                else
-                    HandleHasDuplicates(duplicateResults, inputString);
-                
-                // Force the garbage collector to run, after each search
-                // session. The idea being that collector will clean up any
-                // outstanding resources from the run.
-                GC.Collect();
-            } while (true);
+            return statusFactory.ConstructSuccess(comparisonRequest, duplicateResults);
         }
 
         
@@ -108,30 +98,37 @@ namespace ImgDiff
         
         static void OutputHelpText()
         {
-            Console.WriteLine("_____About_____");
-            Console.WriteLine("This application is used to discover and determine duplicate images.");
-            Console.WriteLine("This is done in 1 of 3 'request' types. Only 1 request can be active at a given time.");
-            Console.WriteLine("The 3 request types are 'Directory', 'Single', and 'Pair'.");
-            Console.WriteLine("Directory compares all images in a directory with every other one.");
-            Console.WriteLine("Single compares 1 image with all other images in a given directory.");
-            Console.WriteLine("Pair compares 2 different images with one another.");
-            
-            Console.WriteLine("_____Request Formats_____");
-            Console.WriteLine("Requests can be made using the following formats"); 
-            Console.WriteLine("    (Directory)              '/path/to/some/directory'");
-            Console.WriteLine("    (Image with Directory)   '/path/to/image.[extension] , /directory/to/compare/against'");
-            Console.WriteLine("    (Image with Other Image) '/path/to/image1.[extension] , /path/to/image2.[extension]'");
-            Console.WriteLine("Valid extensions are " + validExtensionsCombined);
-            Console.WriteLine("Other extension types will simply be ignore by the application.");
-            
-            Console.WriteLine("_____Options_____");
-            Console.WriteLine("There are currently 2 options that can be set.");
-            Console.WriteLine("Directory Level: Tells the program how deep in the directory to search. Does not apply to the Singe request type.");
-            Console.WriteLine("    Values: all, [top]");
-            Console.WriteLine("Bias Factor: The percentage that a comparison must equal, or exceed, for an image to be considered a duplicate.");
-            Console.WriteLine("    Values: 0 to 100, [90]");
-            Console.WriteLine("Type 'options' to overwrite the current option settings.");
+            string validExtensionsCombined = ValidExtensions.ForImage.ToAggregatedString();
+            string changeOptionCommands    = ProgramCommands.ToChangeOptions.ToAggregatedString();
 
+            var helpText = 
+$@" *** {Program.NAME} ***
+_____ABOUT
+This application is used to discover and determine duplicate images.
+This is done in 1 of 3 'request' types. Only 1 request can be active at a given time.
+The 3 request types are 'Directory', 'Single', and 'Pair'.
+Directory - Compares all images in a directory with every other.
+Single    - Compares 1 image with all other images in a given directory.
+Pair      - Compares 2 different images with each other.
+
+_____FORMATS
+Requests can be made using the following formats
+    (Directory)              '/path/to/some/directory'
+    (Image with Directory)   '/path/to/image.[extension] , /directory/to/compare/against'
+    (Image with Other Image) '/path/to/image1.[extension] , /path/to/image2.[extension]'
+Valid extensions are {validExtensionsCombined}.
+Other extension types will simply be ignore by the application.
+
+_____OPTIONS
+There are currently 2 options that can be set.
+Directory Level: Tells the program how deep in the directory to search. Does not apply to the Singe request type.
+    Values: all, [top]
+Bias Factor: The percentage that a comparison must equal, or exceed, for an image to be considered a duplicate.
+    Values: 0 to 100, [80]
+Type {changeOptionCommands} to overwrite the current option settings.
+";
+            
+            Console.WriteLine(helpText);
         }
         
         /// <summary>
@@ -163,28 +160,9 @@ namespace ImgDiff
             // Build a new `ComparisonOptions` object, using the newly created dictionary
             // from the user's input.
             var updatedOptions = new ComparisonOptionsBuilder()
-                .FromCommandFlags(flagsToChange, new Some<ComparisonOptions>(currentOptions));
+                .BuildFromFlags(flagsToChange, new Some<ComparisonOptions>(currentOptions));
 
             return updatedOptions;
-        }
-        
-        static void HandleNoDuplicates(string requestedDirectory)
-        {
-            Console.WriteLine($"No duplicate images were found in '{requestedDirectory}'.");
-        }
-        
-        static void HandleHasDuplicates(List<DuplicateResult> duplicateResults, string requestedDirectory)
-        {
-            Console.WriteLine($"The following {duplicateResults.Count} duplicates were found in '{requestedDirectory}':");
-            for (var resultIndex = 0; resultIndex < duplicateResults.Count(); resultIndex++)
-            {
-                if (!duplicateResults[resultIndex].Duplicates.Any())
-                    continue;
-                    
-                Console.WriteLine($"Result #{resultIndex}: {duplicateResults[resultIndex].BaseImage.Name}");
-                for (var dupIndex = 0; dupIndex < duplicateResults[resultIndex].Duplicates.Count(); dupIndex++)
-                    Console.WriteLine($"\tDupe #{dupIndex}: {duplicateResults[resultIndex].Duplicates[dupIndex].Name}");
-            }
         }
     }
 }

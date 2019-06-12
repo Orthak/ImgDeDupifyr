@@ -10,19 +10,19 @@ namespace ImgDiff.Builders
 {
     public class ComparisonOptionsBuilder
     {
-        SearchOption? searchOption;
-        double? biasPercent;
+        Option<SearchOption> searchOption;
+        Option<double> biasPercent;
 
         public ComparisonOptionsBuilder WithSearchOption(SearchOption option)
         {
-            searchOption = option;
+            searchOption = new Some<SearchOption>(option);
 
             return this;
         }
 
         public ComparisonOptionsBuilder ShouldSucceedWithPercentage(double bias)
         {
-            biasPercent = bias;
+            biasPercent = new Some<double>(bias);
 
             return this;
         }
@@ -45,7 +45,7 @@ namespace ImgDiff.Builders
         /// <param name="flags">The name/value store of flags that was returned by the command parser.</param>
         /// <exception cref="BiasOutOfBoundsException">Thrown if the parsed bias factor
         /// is greater than 100, or less than 0.</exception>
-        public ComparisonOptions FromCommandFlags(Dictionary<string, string> flags, Option<ComparisonOptions> currentOptions)
+        public ComparisonOptions BuildFromFlags(Dictionary<string, string> flags, Option<ComparisonOptions> currentOptions)
         {
             // If there are no flags, use the default values. Or, if we have some
             // options already defined, use those.
@@ -53,8 +53,8 @@ namespace ImgDiff.Builders
             {
                 if (currentOptions.IsSome)
                 {
-                    searchOption = currentOptions.Value.DirectorySearchOption;
-                    biasPercent = currentOptions.Value.BiasPercent;
+                    searchOption = new Some<SearchOption>(currentOptions.Value.DirectorySearchOption);
+                    biasPercent = new Some<double>(currentOptions.Value.BiasPercent);
                 }
 
                 return BuildInternal();
@@ -68,12 +68,12 @@ namespace ImgDiff.Builders
                         ? SearchOption.TopDirectoryOnly
                         : SearchOption.AllDirectories;
                 
-                searchOption = searchIn;
+                searchOption = new Some<SearchOption>(searchIn);
             }
 
             var biasFactor = flags[CommandFlagProperties.BiasFactorFlag.Name];
             if (!string.IsNullOrEmpty(biasFactor))
-                biasPercent = Convert.ToDouble(biasFactor);
+                biasPercent = new Some<double>(Convert.ToDouble(biasFactor));
             
             return BuildInternal();
         }
@@ -87,11 +87,11 @@ namespace ImgDiff.Builders
         /// <exception cref="IncompleteComparisonOptionsException"></exception>
         ComparisonOptions BuildInternal()
         {
-            if (!searchOption.HasValue)
-                searchOption = SearchOption.TopDirectoryOnly;
+            if (searchOption.IsNone)
+                searchOption = new Some<SearchOption>(SearchOption.TopDirectoryOnly);
 
-            if (!biasPercent.HasValue)
-                biasPercent = 1/(double)9;
+            if (biasPercent.IsNone)
+                biasPercent = new Some<double>(1/(double)8);
             
             return new ComparisonOptions(
                 searchOption.Value,

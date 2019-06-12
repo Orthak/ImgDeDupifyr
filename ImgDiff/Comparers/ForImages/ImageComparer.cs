@@ -5,8 +5,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using ImgDiff.Interfaces;
 using ImgDiff.Models;
+using ImgDiff.Monads;
 
-namespace ImgDiff.Comparers
+namespace ImgDiff.Comparers.ForImages
 {
     public abstract class ImageComparer
     {
@@ -14,7 +15,7 @@ namespace ImgDiff.Comparers
         protected readonly ICompareStrings hashComparer;
         protected readonly ComparisonOptions comparisonOptions;
 
-        protected readonly List<DuplicateResult> duplicateResults = new List<DuplicateResult>();
+        protected readonly List<DeDupifyrResult> duplicateResults = new List<DeDupifyrResult>();
 
         protected ImageComparer(
             IHashProvider provider,
@@ -67,7 +68,7 @@ namespace ImgDiff.Comparers
                 hash);
         }
 
-        protected async Task<bool> DirectComparison(LocalImage source, LocalImage target)
+        protected async Task<Option<DuplicateImage>> DirectComparison(LocalImage source, LocalImage target)
         {
             // First, we check for 100% equality. This is much faster when
             // C# gets to do it's own thing. Doing it this way also means
@@ -75,7 +76,7 @@ namespace ImgDiff.Comparers
             // we don't need to. If they aren't fully equal, we move on to
             // hash comparison, using the Bias Factor in our options.
             if (source.Hash == target.Hash)
-                return true;
+                return new Some<DuplicateImage>(new DuplicateImage(target, 1.0));
 
             // If they're not 100% equal, we need to check how equal 
             // they are against the bias option.
@@ -83,8 +84,31 @@ namespace ImgDiff.Comparers
                 source.Hash,
                 target.Hash);
             if (percentage >= comparisonOptions.BiasPercent)
-                return true;
+                return new Some<DuplicateImage>(new DuplicateImage(target, percentage));
 
+            return new None<DuplicateImage>();
+        }
+
+        /// <summary>
+        /// If the images have the same hash, add them to the duplicate collection.
+        /// </summary>
+        /// <param name="source"></param>
+        /// <param name="target"></param>
+        /// <param name="duplicateImages"></param>
+        /// <returns>`true` if the item was added, and `false` if not.</returns>
+        protected async Task<bool> UpdateDuplicationCollection(
+            LocalImage source,
+            LocalImage target,
+            List<DuplicateImage> duplicateImages)
+        {
+            var duplicate = await DirectComparison(source, target);
+            if (duplicate.IsSome)
+            {
+                duplicateImages.Add(duplicate.Value);
+
+                return true;
+            }
+            
             return false;
         }
         

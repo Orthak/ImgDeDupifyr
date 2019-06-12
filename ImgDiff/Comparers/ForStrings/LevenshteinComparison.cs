@@ -2,7 +2,7 @@ using System;
 using System.Threading.Tasks;
 using ImgDiff.Interfaces;
 
-namespace ImgDiff.Comparers
+namespace ImgDiff.Comparers.ForStrings
 {
     public class LevenshteinComparison : ICompareStrings
     {

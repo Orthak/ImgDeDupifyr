@@ -5,16 +5,17 @@ using ImgDiff.Models;
 namespace ImgDiff.Factories
 {
     public class ComparisonRequestFactory
-    {        
+    {
+        readonly ComparisonRequestBuilder requestBuilder = new ComparisonRequestBuilder();
+        
         /// <summary>
         /// To help better represent what the user requested, and perform better checks
         /// against the request, we build a new object to hold this data.
         /// </summary>
         /// <param name="fromRequest">The raw string request that was given by the user.</param>
         /// <returns>The object representation of the user's request.</returns>
-        public ComparisonRequest ConstructNew(string fromRequest)
+        public ComparisonRequest Construct(string fromRequest)
         {
-            var requestBuilder = new ComparisonRequestBuilder();
             if (fromRequest.Contains(','))
             {
                 var requestArgs = fromRequest.Split(',');

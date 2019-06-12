@@ -1,5 +1,7 @@
 using System;
 using ImgDiff.Comparers;
+using ImgDiff.Comparers.ForImages;
+using ImgDiff.Comparers.ForStrings;
 using ImgDiff.Hashing;
 using ImgDiff.Interfaces;
 using ImgDiff.Models;
@@ -17,7 +19,7 @@ namespace ImgDiff.Factories
         /// <returns>The comparison object, that will handle the current request.</returns>
         /// <exception cref="ArgumentOutOfRangeException">Throws if we get a <see cref="ComparisonWith"/>
         /// value that isn't recognized.</exception>
-        public ICompareImages ConstructNew(ComparisonRequest fromRequest, ComparisonOptions withOptions)
+        public ICompareImages Construct(ComparisonRequest fromRequest, ComparisonOptions withOptions)
         {
             ICompareImages imageComparer;
 

@@ -19,10 +19,13 @@ namespace ImgDiff.Hashing
         public Task<string> CreateHash(byte[] inputBytes) =>
             Task.Run(() =>
             {
-                // TODO: Needs to be improved. Research required.
-                var reversed = inputBytes.Reverse().ToArray();
+                var reversedBinary = 
+                    new BitArray(inputBytes
+                        .Reverse()
+                        .ToArray());
+                var hash = reversedBinary.GetBytes();
 
-                return Convert.ToBase64String(reversed);
+                return Convert.ToBase64String(hash);
             });
     }
 }

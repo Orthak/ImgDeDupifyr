@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using ImgDiff.Interfaces;
 using ImgDiff.Models;
 
-namespace ImgDiff.Comparers
+namespace ImgDiff.Comparers.ForImages
 {
     /// <summary>
     /// Compare 2 different images, specifically. 
@@ -19,7 +19,7 @@ namespace ImgDiff.Comparers
         : base(injectedHashProvider, stringComparer, options)
         { }
         
-        public async Task<List<DuplicateResult>> Run(ComparisonRequest request)
+        public async Task<List<DeDupifyrResult>> Run(ComparisonRequest request)
         {
             Console.WriteLine($"Comparing images at {request.FirstImagePath.Value} and {request.SecondImagePath.Value}...");
             
@@ -31,10 +31,11 @@ namespace ImgDiff.Comparers
             var sourceImage = await BuildLocalImage(request.FirstImagePath.Value);
             var targetImage = await BuildLocalImage(request.SecondImagePath.Value);
 
-            var areEqual = await DirectComparison(sourceImage, targetImage);
-            var duplicateResult = new DuplicateResult(sourceImage);
-            if (areEqual)
-                duplicateResult.Duplicates.Add(targetImage);
+            var duplicateResult = new DeDupifyrResult(sourceImage);
+            await UpdateDuplicationCollection(
+                sourceImage,
+                targetImage,
+                duplicateResult.Duplicates);
             
             duplicateResults.Add(duplicateResult);
             
