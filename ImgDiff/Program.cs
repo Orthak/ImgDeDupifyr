@@ -31,9 +31,9 @@ namespace ImgDiff
             var flags = await flagsParser.Parse(args);
             var comparerOptions = new ComparisonOptionsBuilder().BuildFromFlags(flags, new None<ComparisonOptions>());
 
-            var requestFactory = new ComparisonRequestFactory();
+            var requestFactory    = new ComparisonRequestFactory();
             var comparisonFactory = new ImageComparisonFactory();
-            var statusFactory = new ExecutionStatusFactory();
+            var statusFactory     = new ExecutionStatusFactory();
             mainLoop = new MainConsoleLoop(
                 requestFactory,
                 comparisonFactory, 
@@ -74,11 +74,8 @@ namespace ImgDiff
                     continue;
                 }
 
-                if (executionStatus.Results.IsSome)
-                    if (executionStatus.Results.Value.Count <= 0)
-                        HandleNoDuplicates();
-                    else
-                        HandleHasDuplicates(executionStatus.Results.Value);
+                if (!executionStatus.IsFaulted)
+                    executionStatus.PrintingInstructions();
 
                 // Force the garbage collector to run, after each search
                 // session. The idea being that collector will clean up any

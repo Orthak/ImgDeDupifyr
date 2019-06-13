@@ -130,5 +130,26 @@ namespace ImgDiff.Comparers.ForImages
             
             return hashProvider.CreateHash(bytesToHash);
         }
+
+        public override Action PrintInstructions() => () => 
+        {
+            if (duplicateResults.Count <= 0)
+                Console.WriteLine($"No images in the directory are duplicates of each-other.");
+            else
+            {
+                Console.WriteLine($"The following {duplicateResults.Count} duplicates were found in the request.");
+                for (var resultIndex = 0; resultIndex < duplicateResults.Count(); resultIndex++)
+                {
+                    if (!duplicateResults[resultIndex].Duplicates.Any())
+                        continue;
+
+                    Console.WriteLine(
+                        $"Result #{resultIndex + 1}: {duplicateResults[resultIndex].SourceImage.Name}");
+                    for (var dupIndex = 0; dupIndex < duplicateResults[resultIndex].Duplicates.Count(); dupIndex++)
+                        Console.WriteLine(
+                            $"\tDupe #{dupIndex + 1}: {duplicateResults[resultIndex].Duplicates[dupIndex].Image.Name} - {duplicateResults[resultIndex].Duplicates[dupIndex].DuplicationPercent:P}");
+                }
+            }
+        };
     }
 }

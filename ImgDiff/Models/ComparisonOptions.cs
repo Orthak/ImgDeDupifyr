@@ -20,7 +20,7 @@ namespace ImgDiff.Models
             if (biasPercent < 0)
                 throw BuildBiasBoundsException(biasPercent, "less than 0");
             
-            BiasPercent = 1/biasPercent;
+            BiasPercent = biasPercent / 100;
         }
         
         static BiasOutOfBoundsException BuildBiasBoundsException(double value, string boundaryMessage)

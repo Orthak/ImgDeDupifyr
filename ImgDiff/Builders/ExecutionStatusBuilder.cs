@@ -10,6 +10,7 @@ namespace ImgDiff.Builders
         ComparisonRequest originalRequest;
         bool isTerminated;
         bool isFaulted;
+        Action instructions;
         Option<List<DeDupifyrResult>> results     = new None<List<DeDupifyrResult>>();
         Option<ComparisonOptions> optionOverrides = new None<ComparisonOptions>();
         Option<Exception> faultedReason           = new None<Exception>();
@@ -49,6 +50,13 @@ namespace ImgDiff.Builders
             return this;
         }
 
+        public ExecutionStatusBuilder WithPrintInstructions(Action printInstructions)
+        {
+            instructions = printInstructions;
+
+            return this;
+        }
+        
         public ExecutionStatusBuilder FaultedWithException(Exception faultReason)
         {
             faultedReason = new Some<Exception>(faultReason);
@@ -62,6 +70,7 @@ namespace ImgDiff.Builders
                 originalRequest,
                 isTerminated,
                 isFaulted,
+                instructions,
                 results,
                 optionOverrides,
                 faultedReason);

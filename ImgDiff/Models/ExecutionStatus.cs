@@ -12,16 +12,19 @@ namespace ImgDiff.Models
         
         public bool IsFaulted { get; }
         
+        public Action PrintingInstructions { get; }
+
         public Option<List<DeDupifyrResult>> Results { get; }
         
         public Option<ComparisonOptions> OptionOverrides { get; }
-
+        
         public Option<Exception> FaultedReason { get; }
 
         public ExecutionStatus(
             ComparisonRequest originalRequest,
             bool isTerminated,
             bool isFaulted,
+            Action printingInstructions,
             Option<List<DeDupifyrResult>> results,
             Option<ComparisonOptions> optionOverrides,
             Option<Exception> faultedReason)
@@ -29,6 +32,7 @@ namespace ImgDiff.Models
             OriginalRequest = originalRequest;
             IsTerminated = isTerminated;
             IsFaulted = isFaulted;
+            PrintingInstructions = printingInstructions;
             Results = results;
             OptionOverrides = optionOverrides;
             FaultedReason = faultedReason;

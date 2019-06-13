@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using ImgDiff.Interfaces;
 using ImgDiff.Models;
+using ImgDiff.Monads;
 
 namespace ImgDiff.Comparers.ForImages
 {
@@ -42,6 +43,15 @@ namespace ImgDiff.Comparers.ForImages
             return duplicateResults;
         }
 
+        protected override async Task<Option<DuplicateImage>> DirectComparison(LocalImage source, LocalImage target)
+        {
+            var percentageEquivalent = await hashComparer.CalculatePercentage(
+                source.Hash, 
+                target.Hash);
+            
+            return new Some<DuplicateImage>(new DuplicateImage(target, percentageEquivalent));
+        }
+
         protected override Task<string> GetFileHash(string filePath)
         {
             // Because our sample size is so small (only 2 images at a time), we can
@@ -50,5 +60,11 @@ namespace ImgDiff.Comparers.ForImages
 
             return hashProvider.CreateHash(bytes);
         }
+
+        public override Action PrintInstructions() => () =>
+        {
+            Console.WriteLine(
+                $"The images are similar by approximately {duplicateResults[0].Duplicates[0].DuplicationPercent:P}");
+        };
     }
 }

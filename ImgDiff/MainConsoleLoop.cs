@@ -41,9 +41,8 @@ namespace ImgDiff
                         "You must enter either a directory ('C:\\to\\some\\directory'), or a pair of files separated by a coma ('C:\\path\\to\\first.png,C:\\path\\to\\second.jpg')."));
             }
             
-            var comparisonRequest = requestFactory.Construct(inputString);
             if (CommandIsGiven(inputString, ProgramCommands.ForTermination))
-                return statusFactory.ConstructTerminated(comparisonRequest);
+                return statusFactory.ConstructTerminated();
 
             if (CommandIsGiven(inputString, ProgramCommands.ForHelp))
             {
@@ -52,6 +51,7 @@ namespace ImgDiff
                 return statusFactory.ConstructNoOp();
             }
             
+            var comparisonRequest = requestFactory.Construct(inputString);
             if (CommandIsGiven(inputString, ProgramCommands.ToChangeOptions))
             {
                 initialOptions = OverwriteComparisonOptions(initialOptions);
@@ -65,6 +65,8 @@ namespace ImgDiff
             var imageComparer = comparisonFactory.Construct(comparisonRequest, initialOptions);
 
             Option<List<DeDupifyrResult>> duplicateResults = new None<List<DeDupifyrResult>>();
+
+            Action printInstructions;
             
             // For now, just doing a try/catch at the highest level. I plan
             // to have much better handling. I'll implement the `Either` monad
@@ -74,17 +76,22 @@ namespace ImgDiff
             {
                 var sw = Stopwatch.StartNew();
                 var results = await imageComparer.Run(comparisonRequest);
-                duplicateResults = new Some<List<DeDupifyrResult>>(results);
                 sw.Stop();
-
+                
                 Console.WriteLine($"Done in {sw.ElapsedMilliseconds} ms.");
+                
+                duplicateResults = new Some<List<DeDupifyrResult>>(results);
+                printInstructions = imageComparer.PrintInstructions();
             }
             catch (Exception exception)
             {
                 return statusFactory.ConstructFaulted(exception);
             }
 
-            return statusFactory.ConstructSuccess(comparisonRequest, duplicateResults);
+            return statusFactory.ConstructSuccess(
+                comparisonRequest,
+                duplicateResults,
+                printInstructions);
         }
 
         
@@ -98,8 +105,8 @@ namespace ImgDiff
         
         static void OutputHelpText()
         {
-            string validExtensionsCombined = ValidExtensions.ForImage.ToAggregatedString();
-            string changeOptionCommands    = ProgramCommands.ToChangeOptions.ToAggregatedString();
+            var validExtensionsCombined = ValidExtensions.ForImage.ToAggregatedString();
+            var changeOptionCommands    = ProgramCommands.ToChangeOptions.ToAggregatedString();
 
             var helpText = 
 $@" *** {Program.NAME} ***

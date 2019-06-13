@@ -65,5 +65,18 @@ namespace ImgDiff.Comparers.ForImages
 
             return hashProvider.CreateHash(bytesToHash);
         }
+        public override Action PrintInstructions() => () =>
+        {
+            var givenImage = duplicateResults[0];
+            if (givenImage.Duplicates.Count <= 0)
+                Console.WriteLine($"No images in the directory are duplicates of the given image.");
+            else
+            {
+                Console.WriteLine($"The following {givenImage.Duplicates.Count} duplicates were found in the directory.");
+                for (var dupIndex = 0; dupIndex < givenImage.Duplicates.Count(); dupIndex++)
+                    Console.WriteLine(
+                        $"\tDupe #{dupIndex + 1}: {givenImage.Duplicates[dupIndex].Image.Name} - {givenImage.Duplicates[dupIndex].DuplicationPercent:P}");
+            }
+        };
     }
 }

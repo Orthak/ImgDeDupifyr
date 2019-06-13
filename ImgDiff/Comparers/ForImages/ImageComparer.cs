@@ -68,7 +68,7 @@ namespace ImgDiff.Comparers.ForImages
                 hash);
         }
 
-        protected async Task<Option<DuplicateImage>> DirectComparison(LocalImage source, LocalImage target)
+        protected virtual async Task<Option<DuplicateImage>> DirectComparison(LocalImage source, LocalImage target)
         {
             // First, we check for 100% equality. This is much faster when
             // C# gets to do it's own thing. Doing it this way also means
@@ -102,14 +102,12 @@ namespace ImgDiff.Comparers.ForImages
             List<DuplicateImage> duplicateImages)
         {
             var duplicate = await DirectComparison(source, target);
-            if (duplicate.IsSome)
-            {
-                duplicateImages.Add(duplicate.Value);
-
-                return true;
-            }
+            if (duplicate.IsNone) 
+                return false;
             
-            return false;
+            duplicateImages.Add(duplicate.Value);
+
+            return true;
         }
         
         /// <summary>
@@ -123,5 +121,7 @@ namespace ImgDiff.Comparers.ForImages
         /// <param name="filePath"></param>
         /// <returns></returns>
         protected abstract Task<string> GetFileHash(string filePath);
+
+        public abstract Action PrintInstructions();
     }
 }

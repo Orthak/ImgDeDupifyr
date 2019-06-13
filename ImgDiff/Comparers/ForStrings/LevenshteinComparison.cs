@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using ImgDiff.Interfaces;
 
@@ -22,15 +24,47 @@ namespace ImgDiff.Comparers.ForStrings
             if (source == target)
                 return 1.0;
 
-            int stepsToSame = await ComputeDistance(source, target);
+            var totalSteps = await BatchCalculate(source, target);
+
+            GC.Collect();
 
             // To calculate the percentage that the two strings are similar, we 
             // take the steps we needed, divided by the longest string of the 2.
             // Generally for our use, the string lengths will be the same. For the
             // result to be a percentage, we subtract this division by 1.
-            return (1.0 - ((double)stepsToSame / (double)Math.Max(source.Length, target.Length)));
+            return (1.0 - (totalSteps / (double)Math.Max(source.Length, target.Length)));
         }
-        
+
+        async Task<int> BatchCalculate(string source, string target)
+        {
+            var batchedTasks = new List<Task<int>>();
+            var maxLength = Math.Max(source.Length, target.Length);
+            var batchSize = maxLength / 64;
+            var batchCount = 0;
+            while (batchCount * batchSize < maxLength)
+            {
+                var iterationCount = batchCount * batchSize;
+                var sourceBatch = new string(source
+                    .Skip(iterationCount)
+                    .Take(batchSize)
+                    .ToArray());
+
+                var targetBatch = new string(target
+                    .Skip(iterationCount)
+                    .Take(batchSize)
+                    .ToArray());
+
+                batchedTasks.Add(ComputeDistance(sourceBatch, targetBatch));
+
+                batchCount++;
+            }
+
+            var finishedBatches = await Task.WhenAll(batchedTasks);
+            var totalSteps = finishedBatches.Aggregate((total, next) => total + next);
+            
+            return totalSteps;
+        }
+
         /// <summary>
         /// Computes the Levenshtein distance between the source and
         /// target strings.
@@ -71,15 +105,15 @@ namespace ImgDiff.Comparers.ForStrings
                 for (var src = 0; src <= source.Length; distance[src, 0] = src++) { };
                 for (var trg = 0; trg <= target.Length; distance[0, trg] = trg++) { };
     
-                for (int rowIndex = 1; rowIndex <= source.Length; rowIndex++)
+                for (var rowIndex = 1; rowIndex <= source.Length; rowIndex++)
                 {
-                    for (int colIndex = 1; colIndex <= target.Length; colIndex++)
+                    for (var colIndex = 1; colIndex <= target.Length; colIndex++)
                     {
                         // Step 3: Calculate if there is a cost to transform the character 
                         // at the corresponding position in the source and target string.
                         // If they are the same character, there is no cost. If they're different
                         // there is a cost.
-                        int cost = (target[colIndex - 1] == source[rowIndex - 1]) 
+                        var cost = (target[colIndex - 1] == source[rowIndex - 1]) 
                             ? 0 
                             : 1;
     

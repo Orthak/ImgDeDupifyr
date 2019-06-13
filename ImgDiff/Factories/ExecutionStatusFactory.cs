@@ -8,12 +8,16 @@ namespace ImgDiff.Factories
 {
     public class ExecutionStatusFactory
     {
-        public ExecutionStatus ConstructSuccess(ComparisonRequest original, Option<List<DeDupifyrResult>> results)
+        public ExecutionStatus ConstructSuccess(
+            ComparisonRequest original,
+            Option<List<DeDupifyrResult>> results,
+            Action printInstructions)
         {
             var statusBuilder = InitialBuilder(original);
 
             return statusBuilder
                 .HasResults(results)
+                .WithPrintInstructions(printInstructions)
                 .Build();
         }
 
@@ -26,9 +30,9 @@ namespace ImgDiff.Factories
                 .Build();
         }
 
-        public ExecutionStatus ConstructTerminated(ComparisonRequest original)
+        public ExecutionStatus ConstructTerminated()
         {
-            var statusBuilder = InitialBuilder(original);
+            var statusBuilder = new ExecutionStatusBuilder();
 
             return statusBuilder
                 .ShouldTerminate(true)
