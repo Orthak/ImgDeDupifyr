@@ -39,7 +39,7 @@ namespace ImgDiff.Comparers.ForStrings
         {
             var batchedTasks = new List<Task<int>>();
             var maxLength = Math.Max(source.Length, target.Length);
-            var batchSize = maxLength / 64;
+            var batchSize = maxLength / 256;
             var batchCount = 0;
             while (batchCount * batchSize < maxLength)
             {
