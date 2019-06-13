@@ -78,23 +78,19 @@ namespace ImgDiff.Comparers.ForStrings
         /// for the source and target strings to be equal.</returns>
         Task<int> ComputeDistance(string source, string target)
         {
-            // Validate Parameters
-            if (string.IsNullOrEmpty(source)
-                || string.IsNullOrEmpty(target))
-                return Task.FromResult(0);
-
             // Step 1: The transform count for when either of the strings
             // is 0, is equal to the length of the other. For example, the
             // number of steps to make '' equal to 'hello' would be 5. The
             // reverse scenario is also true.
-            if (source == target)
-                return Task.FromResult(source.Length);
-
-            if (source.Length == 0)
+            if (string.IsNullOrEmpty(source))
                 return Task.FromResult(target.Length);
-
-            if (target.Length == 0)
+            
+            if (string.IsNullOrEmpty(target))
                 return Task.FromResult(source.Length);
+
+            // If the strings are equal, there is no cost.
+            if (source == target)
+                return Task.FromResult(0);
 
             return Task.Run(() =>
             {

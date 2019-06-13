@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using ImgDiff.Interfaces;
 using ImgDiff.Models;
@@ -22,13 +23,12 @@ namespace ImgDiff.Comparers.ForImages
         
         public async Task<List<DeDupifyrResult>> Run(ComparisonRequest request)
         {
+            // If the paths are equal, print that we were given the same image path.
+            if (request.FirstImagePath.Value == request.SecondImagePath.Value)
+                Console.WriteLine("The two paths given point to the same image.");
+
             Console.WriteLine($"Comparing images at {request.FirstImagePath.Value} and {request.SecondImagePath.Value}...");
             
-            // If the paths are equal, just return the source result
-            // with an empty duplicate list.
-            if (request.FirstImagePath.Value == request.SecondImagePath.Value)
-                return duplicateResults;
-
             var sourceImage = await BuildLocalImage(request.FirstImagePath.Value);
             var targetImage = await BuildLocalImage(request.SecondImagePath.Value);
 
@@ -63,8 +63,15 @@ namespace ImgDiff.Comparers.ForImages
 
         public override Action PrintInstructions() => () =>
         {
+            if (!duplicateResults.Any())
+                return;
+            
+            var result = duplicateResults[0];
+            var duplicates = result.Duplicates;
             Console.WriteLine(
-                $"The images are similar by approximately {duplicateResults[0].Duplicates[0].DuplicationPercent:P}");
+                !duplicates.Any()
+                ? $"The images are not similar in any way."
+                : $"The images are similar by approximately {duplicateResults[0].Duplicates[0].DuplicationPercent:P}");
         };
     }
 }
