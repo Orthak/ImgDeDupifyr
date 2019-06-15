@@ -97,6 +97,10 @@ namespace ImgDiff
                 CommandFlagProperties.SearchOptionFlag.ShortString,
                 CommandFlagProperties.SearchOptionFlag.LongString);
             flagsParser.AddFlag(
+                CommandFlagProperties.StrictnessFlag.Name,
+                CommandFlagProperties.StrictnessFlag.ShortString,
+                CommandFlagProperties.StrictnessFlag.LongString);
+            flagsParser.AddFlag(
                 CommandFlagProperties.BiasFactorFlag.Name,
                 CommandFlagProperties.BiasFactorFlag.ShortString,
                 CommandFlagProperties.BiasFactorFlag.LongString);

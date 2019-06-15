@@ -1,5 +1,6 @@
 using System;
 using ImgDiff.Comparers;
+using ImgDiff.Comparers.ForBitmap;
 using ImgDiff.Comparers.ForImages;
 using ImgDiff.Comparers.ForStrings;
 using ImgDiff.Hashing;
@@ -28,13 +29,13 @@ namespace ImgDiff.Factories
                 case ComparisonWith.All:
                     imageComparer = new DirectoryComparison(
                         new BasicHashProvider(),
-                        new HashComparison(withOptions.BiasPercent),
+                        new HashComparison(withOptions.BiasPercent), 
                         withOptions);
                     break;
                 case ComparisonWith.Pair:
                     imageComparer = new PairComparison(
                         new BasicHashProvider(), 
-                        new LevenshteinComparison(),
+                        new PixelComparison(withOptions),
                         withOptions);
                     break;
                 case ComparisonWith.Single:

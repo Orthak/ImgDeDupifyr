@@ -127,9 +127,11 @@ Valid extensions are {validExtensionsCombined}.
 Other extension types will simply be ignore by the application.
 
 _____OPTIONS
-There are currently 2 options that can be set.
+There are currently 3 options that can be set.
 Directory Level: Tells the program how deep in the directory to search. Does not apply to the Singe request type.
     Values: all, [top]
+Strictness: How equal the pixel colors must be, to consider them to be equal.
+    Values: Equal, [Fuzzy], Loose
 Bias Factor: The percentage that a comparison must equal, or exceed, for an image to be considered a duplicate.
     Values: 0 to 100, [80]
 Type {changeOptionCommands} to overwrite the current option settings.
@@ -156,6 +158,13 @@ Type {changeOptionCommands} to overwrite the current option settings.
             var newDirectoryLevel = Console.ReadLine();
             if (!string.IsNullOrEmpty(newDirectoryLevel))
                 flagsToChange[CommandFlagProperties.SearchOptionFlag.Name] = newDirectoryLevel;
+            
+            // Ask for the new strictness level to use. No value means we keep the current
+            // value we have.
+            Console.WriteLine("Strictness Level: ");
+            var newStrictness = Console.ReadLine();
+            if (!string.IsNullOrEmpty(newStrictness))
+                flagsToChange[CommandFlagProperties.StrictnessFlag.Name] = newStrictness;
             
             // Ask for the new bias factor. The current setting is kept if the user gives
             // no new value.

@@ -6,7 +6,7 @@ using ImgDiff.Interfaces;
 
 namespace ImgDiff.Comparers.ForStrings
 {
-    public class LevenshteinComparison : ICompareStrings
+    public class LevenshteinComparison : ICalculateDifference<string>
     {
         /// <summary>
         /// Used to get the percentage of the difference between 2 strings.

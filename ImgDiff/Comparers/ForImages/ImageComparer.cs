@@ -9,21 +9,21 @@ using ImgDiff.Monads;
 
 namespace ImgDiff.Comparers.ForImages
 {
-    public abstract class ImageComparer
+    public abstract class ImageComparer<TDifference>
     {
         protected readonly IHashProvider hashProvider;
-        protected readonly ICompareStrings hashComparer;
+        protected readonly ICalculateDifference<TDifference> differenceCalculator;
         protected readonly ComparisonOptions comparisonOptions;
 
         protected readonly List<DeDupifyrResult> duplicateResults = new List<DeDupifyrResult>();
 
         protected ImageComparer(
             IHashProvider provider,
-            ICompareStrings stringComparer,
+            ICalculateDifference<TDifference> difference,
             ComparisonOptions options)
         {
             hashProvider = provider;
-            hashComparer = stringComparer;
+            differenceCalculator = difference;
             comparisonOptions = options;
         }
         
@@ -77,14 +77,6 @@ namespace ImgDiff.Comparers.ForImages
             // hash comparison, using the Bias Factor in our options.
             if (source.Hash == target.Hash)
                 return new Some<DuplicateImage>(new DuplicateImage(target, 1.0));
-
-            // If they're not 100% equal, we need to check how equal 
-            // they are against the bias option.
-            var percentage = await hashComparer.CalculatePercentage(
-                source.Hash,
-                target.Hash);
-            if (percentage >= comparisonOptions.BiasPercent)
-                return new Some<DuplicateImage>(new DuplicateImage(target, percentage));
 
             return new None<DuplicateImage>();
         }

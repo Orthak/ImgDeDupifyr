@@ -3,7 +3,7 @@ using ImgDiff.Interfaces;
 
 namespace ImgDiff.Comparers.ForStrings
 {
-    public class HashComparison : ICompareStrings
+    public class HashComparison : ICalculateDifference<string>
     {
         readonly double biasFactor;
         

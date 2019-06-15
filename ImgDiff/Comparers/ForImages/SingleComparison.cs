@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using ImgDiff.Constants;
 using ImgDiff.Interfaces;
 using ImgDiff.Models;
+using ImgDiff.Monads;
 
 namespace ImgDiff.Comparers.ForImages
 {
@@ -13,11 +14,11 @@ namespace ImgDiff.Comparers.ForImages
     /// Compare a single image file against all other image files in
     /// the given directory, and optionally in all the sub-directories.  
     /// </summary>
-    public class SingleComparison : ImageComparer, ICompareImages
+    public class SingleComparison : ImageComparer<string>, ICompareImages
     {
         public SingleComparison(
             IHashProvider provider,
-            ICompareStrings stringComparer,
+            ICalculateDifference<string> stringComparer,
             ComparisonOptions options) 
         : base(provider, stringComparer, options)
         { }
@@ -43,6 +44,21 @@ namespace ImgDiff.Comparers.ForImages
             return duplicateResults;
         }
 
+        protected override async Task<Option<DuplicateImage>> DirectComparison(LocalImage source, LocalImage target)
+        {
+            var directResult = await base.DirectComparison(source, target);
+            if (directResult.IsSome)
+                return directResult;
+
+            var percentage = await differenceCalculator.CalculatePercentage(
+                source.Hash,
+                target.Hash);
+            if (percentage >= comparisonOptions.BiasPercent)
+                return new Some<DuplicateImage>(new DuplicateImage(target, percentage));
+            
+            return new None<DuplicateImage>();
+        }
+
         async Task<DuplicateImage[]> CompareToOthers(LocalImage source, LocalImage[] targets)
         {
             var duplicates = new List<DuplicateImage>();
@@ -64,7 +80,8 @@ namespace ImgDiff.Comparers.ForImages
             var bytesToHash = bytes.Take(bytes.Length / lengthReductionModifier).ToArray();
 
             return hashProvider.CreateHash(bytesToHash);
-        }
+        } 
+        
         public override Action PrintInstructions() => () =>
         {
             var givenImage = duplicateResults[0];

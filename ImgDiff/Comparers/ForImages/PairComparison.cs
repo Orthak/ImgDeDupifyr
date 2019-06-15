@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,13 +13,13 @@ namespace ImgDiff.Comparers.ForImages
     /// <summary>
     /// Compare 2 different images, specifically. 
     /// </summary>
-    public class PairComparison : ImageComparer, ICompareImages
+    public class PairComparison : ImageComparer<Bitmap>, ICompareImages
     {
         public PairComparison(
             IHashProvider injectedHashProvider,
-            ICompareStrings stringComparer,
+            ICalculateDifference<Bitmap> bmpComparer,
             ComparisonOptions options)
-        : base(injectedHashProvider, stringComparer, options)
+        : base(injectedHashProvider, bmpComparer, options)
         { }
         
         public async Task<List<DeDupifyrResult>> Run(ComparisonRequest request)
@@ -45,9 +46,9 @@ namespace ImgDiff.Comparers.ForImages
 
         protected override async Task<Option<DuplicateImage>> DirectComparison(LocalImage source, LocalImage target)
         {
-            var percentageEquivalent = await hashComparer.CalculatePercentage(
-                source.Hash, 
-                target.Hash);
+            var percentageEquivalent = await differenceCalculator.CalculatePercentage(
+                new Bitmap(source.FilePath),
+                new Bitmap(target.FilePath));
             
             return new Some<DuplicateImage>(new DuplicateImage(target, percentageEquivalent));
         }

@@ -14,13 +14,13 @@ namespace ImgDiff.Comparers.ForImages
     /// Compare each image in a given directory will all other images
     /// in that directory. Can also optionally look through all sub-directories.
     /// </summary>
-    public class DirectoryComparison : ImageComparer, ICompareImages
+    public class DirectoryComparison : ImageComparer<string>, ICompareImages
     {
         public DirectoryComparison(
             IHashProvider injectedHashProvider,
-            ICompareStrings stringComparer,
+            ICalculateDifference<string> comparer,
             ComparisonOptions options)
-        : base (injectedHashProvider, stringComparer, options)
+        : base (injectedHashProvider, comparer, options)
         { }
         
         public async Task<List<DeDupifyrResult>> Run(ComparisonRequest request)

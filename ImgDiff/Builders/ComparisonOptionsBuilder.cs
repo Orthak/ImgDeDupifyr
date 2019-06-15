@@ -11,6 +11,7 @@ namespace ImgDiff.Builders
     public class ComparisonOptionsBuilder
     {
         Option<SearchOption> searchOption;
+        Option<Strictness> colorStrictness;
         Option<double> biasPercent;
 
         public ComparisonOptionsBuilder WithSearchOption(SearchOption option)
@@ -20,6 +21,13 @@ namespace ImgDiff.Builders
             return this;
         }
 
+        public ComparisonOptionsBuilder AsStrictAs(Strictness strictness)
+        {
+            colorStrictness = new Some<Strictness>(strictness);
+
+            return this;
+        }
+        
         public ComparisonOptionsBuilder ShouldSucceedWithPercentage(double bias)
         {
             biasPercent = new Some<double>(bias);
@@ -53,8 +61,9 @@ namespace ImgDiff.Builders
             {
                 if (currentOptions.IsSome)
                 {
-                    searchOption = new Some<SearchOption>(currentOptions.Value.DirectorySearchOption);
-                    biasPercent = new Some<double>(currentOptions.Value.BiasPercent);
+                    searchOption    = new Some<SearchOption>(currentOptions.Value.DirectorySearchOption);
+                    colorStrictness = new Some<Strictness>(currentOptions.Value.ColorStrictness);
+                    biasPercent     = new Some<double>(currentOptions.Value.BiasPercent);
                 }
 
                 return BuildInternal();
@@ -70,6 +79,10 @@ namespace ImgDiff.Builders
                 
                 searchOption = new Some<SearchOption>(searchIn);
             }
+
+            var strictness = flags[CommandFlagProperties.StrictnessFlag.Name];
+            if (!string.IsNullOrEmpty(strictness))
+                colorStrictness = new Some<Strictness>(Enum.Parse<Strictness>(strictness));
 
             var biasFactor = flags[CommandFlagProperties.BiasFactorFlag.Name];
             if (!string.IsNullOrEmpty(biasFactor))
@@ -90,11 +103,15 @@ namespace ImgDiff.Builders
             if (searchOption.IsNone)
                 searchOption = new Some<SearchOption>(SearchOption.TopDirectoryOnly);
 
+            if (colorStrictness.IsNone)
+                colorStrictness = new Some<Strictness>(Strictness.Fuzzy);
+            
             if (biasPercent.IsNone)
                 biasPercent = new Some<double>(1/(double)8);
             
             return new ComparisonOptions(
                 searchOption.Value,
+                colorStrictness.Value,
                 biasPercent.Value);
         }
     }
