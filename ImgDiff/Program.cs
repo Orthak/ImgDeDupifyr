@@ -105,24 +105,5 @@ namespace ImgDiff
                 CommandFlagProperties.BiasFactorFlag.ShortString,
                 CommandFlagProperties.BiasFactorFlag.LongString);
         }
-        
-        static void HandleNoDuplicates()
-        {
-            Console.WriteLine($"No duplicate images were found.");
-        }
-        
-        static void HandleHasDuplicates(List<DeDupifyrResult> duplicateResults)
-        {
-            Console.WriteLine($"The following {duplicateResults.Count} duplicates were found in the request.");
-            for (var resultIndex = 0; resultIndex < duplicateResults.Count(); resultIndex++)
-            {
-                if (!duplicateResults[resultIndex].Duplicates.Any())
-                    continue;
-                    
-                Console.WriteLine($"Result #{resultIndex + 1}: {duplicateResults[resultIndex].SourceImage.Name}");
-                for (var dupIndex = 0; dupIndex < duplicateResults[resultIndex].Duplicates.Count(); dupIndex++)
-                    Console.WriteLine($"\tDupe #{dupIndex + 1}: {duplicateResults[resultIndex].Duplicates[dupIndex].Image.Name} - {duplicateResults[resultIndex].Duplicates[dupIndex].DuplicationPercent:P}");
-            }
-        }
     }
 }

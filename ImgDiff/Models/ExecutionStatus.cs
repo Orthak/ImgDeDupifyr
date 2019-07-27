@@ -4,6 +4,7 @@ using ImgDiff.Monads;
 
 namespace ImgDiff.Models
 {
+    // TODO: Create sub-classes for this, for each execution type.
     public class ExecutionStatus
     {
         public ComparisonRequest OriginalRequest { get; }
@@ -29,13 +30,13 @@ namespace ImgDiff.Models
             Option<ComparisonOptions> optionOverrides,
             Option<Exception> faultedReason)
         {
-            OriginalRequest = originalRequest;
-            IsTerminated = isTerminated;
-            IsFaulted = isFaulted;
+            OriginalRequest      = originalRequest;
+            IsTerminated         = isTerminated;
+            IsFaulted            = isFaulted;
             PrintingInstructions = printingInstructions;
-            Results = results;
-            OptionOverrides = optionOverrides;
-            FaultedReason = faultedReason;
+            Results              = results;
+            OptionOverrides      = optionOverrides;
+            FaultedReason        = faultedReason;
         }
     }
 }
