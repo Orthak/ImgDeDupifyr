@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using ImgDiff.Builders;
 using ImgDiff.Constants;
@@ -16,39 +14,18 @@ namespace ImgDiff
 {
     public static class Program
     {
-        public const string NAME = "DeDupifyr";
-        
-        // For now, this value won't change during runtime. There may be a case
-        // later on that we'll need a different flag parser to handle. 
-        static readonly IParseFlags flagsParser = new CommandFlagsParser();
-
-        // Store the main console loop, that we'll be using for the program.
-        static MainConsoleLoop mainLoop;
-        
         static async Task Main(string[] args)
         {
-            AddValidFlags();
-            var flags = await flagsParser.Parse(args);
-            var comparerOptions = new ComparisonOptionsBuilder().BuildFromFlags(flags, new None<ComparisonOptions>());
+            // Setup everything we need to run the application.
+            var comparerOptions = await BuildComparisonOptions(args);
+            var statusFactory   = new ExecutionStatusFactory();
+            var mainLoop        = BuildMainLoop(statusFactory);
 
-            var requestFactory    = new ComparisonRequestFactory();
-            var comparisonFactory = new ImageComparisonFactory();
-            var statusFactory     = new ExecutionStatusFactory();
-            mainLoop = new MainConsoleLoop(
-                requestFactory,
-                comparisonFactory, 
-                statusFactory);
-
-            var helpCommands      = ProgramCommands.ForHelp.ToAggregatedString();
-            var terminateCommands = ProgramCommands.ForTermination.ToAggregatedString();
-            
+            // Print the intro splash.
             Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine("********************");
-            Console.WriteLine($"*     {NAME.ToUpper()}    *");
-            Console.WriteLine("********************");
-            Console.WriteLine($"Type {helpCommands} for more details.");
-            Console.WriteLine($"Type {terminateCommands} to quit.");
+            Console.WriteLine(ConsoleInterface.GetOpeningSplash());
 
+            // Run the main application loop.
             do
             {
                 var executionStatus = statusFactory.ConstructNoOp();
@@ -77,33 +54,42 @@ namespace ImgDiff
                 if (!executionStatus.IsFaulted)
                     executionStatus.PrintingInstructions();
 
-                // Force the garbage collector to run, after each search
-                // session. The idea being that collector will clean up any
-                // outstanding resources from the run.
+                // Force the garbage collector to run, after each search session.
+                // The idea being that collector will clean up any outstanding
+                // resources from the run.
                 GC.Collect();
             } while (true);
 
             Console.WriteLine("Exiting...");
         }
 
+        static MainConsoleLoop BuildMainLoop(ExecutionStatusFactory statusFactory)
+        {
+            var requestFactory = new ComparisonRequestFactory();
+            var comparisonFactory = new ImageComparisonFactory();
+            var mainLoop = new MainConsoleLoop(
+                requestFactory,
+                comparisonFactory,
+                statusFactory);
+            
+            return mainLoop;
+        }
+
         /// <summary>
         /// Tell the parser what to look for. Specifying the names, short
         /// and long command strings that should be added to the parser's result.
         /// </summary>
-        static void AddValidFlags()
+        static async Task<ComparisonOptions> BuildComparisonOptions(string[] args)
         {
-            flagsParser.AddFlag(
-                CommandFlagProperties.SearchOptionFlag.Name, 
-                CommandFlagProperties.SearchOptionFlag.ShortString,
-                CommandFlagProperties.SearchOptionFlag.LongString);
-            flagsParser.AddFlag(
-                CommandFlagProperties.StrictnessFlag.Name,
-                CommandFlagProperties.StrictnessFlag.ShortString,
-                CommandFlagProperties.StrictnessFlag.LongString);
-            flagsParser.AddFlag(
-                CommandFlagProperties.BiasFactorFlag.Name,
-                CommandFlagProperties.BiasFactorFlag.ShortString,
-                CommandFlagProperties.BiasFactorFlag.LongString);
+            var flagsParser = new CommandFlagsParser()
+                .AddFlag(CommandFlagProperties.SearchOptionFlag)
+                .AddFlag(CommandFlagProperties.StrictnessFlag)
+                .AddFlag(CommandFlagProperties.BiasFactorFlag);
+            
+            var flags           = await flagsParser.Parse(args);
+            var comparerOptions = new ComparisonOptionsBuilder().BuildFromFlags(flags, new None<ComparisonOptions>());
+
+            return comparerOptions;
         }
     }
 }

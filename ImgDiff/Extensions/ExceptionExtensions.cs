@@ -1,13 +1,13 @@
 using System;
 
-namespace ImgDiff.Exceptions
+namespace ImgDiff.Extensions
 {
     public static class ExceptionExtensions
     {
         public static void WriteToConsole(this Exception source)
         {
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"{source.GetType().Name}: {source.Message}");
+            Console.WriteLine(source.Message);
 
             if (source.InnerException != null)
             {

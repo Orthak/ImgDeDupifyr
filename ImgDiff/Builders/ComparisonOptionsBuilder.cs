@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using ImgDiff.Constants;
 using ImgDiff.Exceptions;
 using ImgDiff.Models;
@@ -10,9 +11,9 @@ namespace ImgDiff.Builders
 {
     public class ComparisonOptionsBuilder
     {
-        Option<SearchOption> searchOption;
-        Option<Strictness> colorStrictness;
-        Option<double> biasPercent;
+        Option<SearchOption> searchOption = new None<SearchOption>();
+        Option<Strictness> colorStrictness = new None<Strictness>();
+        Option<double> biasPercent = new None<double>();
 
         public ComparisonOptionsBuilder WithSearchOption(SearchOption option)
         {
@@ -57,7 +58,7 @@ namespace ImgDiff.Builders
         {
             // If there are no flags, use the default values. Or, if we have some
             // options already defined, use those.
-            if (flags.Count <= 0)
+            if (flags.Any() == false)
             {
                 if (currentOptions.IsSome)
                 {

@@ -5,7 +5,7 @@ namespace ImgDiff.Constants
         public static readonly string[] ForImage = {
             ".jpg",
             ".jpeg",
-            ".jfif",
+            ".jif",
             ".png",
             ".gif",
             ".gifv",

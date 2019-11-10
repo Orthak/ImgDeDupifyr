@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using ImgDiff.Models;
 
 namespace ImgDiff.Interfaces
 {
@@ -11,7 +12,9 @@ namespace ImgDiff.Interfaces
         /// <param name="optionName">The name of the option, so we can save/get it by the name.</param>
         /// <param name="shortName">The string that is used for the short command.</param>
         /// <param name="longName">The string that is used for the long command.</param>
-        void AddFlag(string optionName, string shortName, string longName);
+        IParseFlags AddFlag(string optionName, string shortName, string longName);
+
+        IParseFlags AddFlag(CommandFlag commandFlag);
 
         /// <summary>
         /// In some cases, we need to parse out the string of commands tha the user

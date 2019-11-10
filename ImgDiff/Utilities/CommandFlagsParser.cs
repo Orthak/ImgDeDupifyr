@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using ImgDiff.Extensions;
 using ImgDiff.Interfaces;
 using ImgDiff.Models;
 
@@ -10,14 +11,25 @@ namespace ImgDiff.Utilities
     public class CommandFlagsParser : IParseFlags
     {
         readonly List<CommandFlag> toParse = new List<CommandFlag>();
-        
-        public void AddFlag(string optionName, string shortName, string longName) =>
+
+        public IParseFlags AddFlag(string optionName, string shortName, string longName)
+        {
             toParse.Add(
                 new CommandFlag(
                     optionName,
                     shortName,
                     longName
                 ));
+
+            return this;
+        }
+
+        public IParseFlags AddFlag(CommandFlag commandFlag)
+        {
+            toParse.Add(commandFlag);
+
+            return this;
+        }
 
         public Task<Dictionary<string, string>> Parse(string commandLineString) =>
             Task.Run(() =>
@@ -38,7 +50,15 @@ namespace ImgDiff.Utilities
 
         public Task<Dictionary<string, string>> Parse(string[] commandLineArgs)
         {
-            var flagsString = commandLineArgs.Aggregate((total, next) => $"{total} {next}");
+            // If we don't get any args, then there's nothing to parse. 
+            // Return back an empty dictionary, so we can use the
+            // default values.
+            if (commandLineArgs.Any() == false)
+            {
+                return Task.FromResult(new Dictionary<string, string>());
+            }
+
+            var flagsString = commandLineArgs.ToAggregatedString();
 
             return Parse(flagsString);
         }

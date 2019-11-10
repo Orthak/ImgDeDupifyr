@@ -6,6 +6,7 @@ namespace ImgDiff.Models
         public string ShortString { get; }
         public string LongString { get; }
         public string Regex { get; }
+        public string DefaultValue { get; }
 
         public CommandFlag(
             string name,
